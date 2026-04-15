@@ -315,7 +315,7 @@ export default function AdminMealsPage() {
                 <div className="bg-[#FFF8F0] rounded-xl p-4">
                   <p className="text-xs text-gray-500 mb-1">Budget per person</p>
                   <p className="text-lg font-bold text-[#FF6B35]">
-                    {formatCurrency(selectedMeal.budget_min)} - {formatCurrency(selectedMeal.budget_max)}
+                    {formatCurrency(selectedMeal.budget_min ?? 0)} - {formatCurrency(selectedMeal.budget_max ?? 0)}
                   </p>
                 </div>
               )}
