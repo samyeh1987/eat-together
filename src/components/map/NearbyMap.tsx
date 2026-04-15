@@ -5,82 +5,6 @@ import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
-// Demo meals with Bangkok coordinates
-const DEMO_MAP_MEALS = [
-  {
-    id: '1',
-    title: 'Friday Night Izakaya 🍶',
-    restaurant: 'Ninja Izakaya, Thonglor',
-    lat: 13.7314,
-    lng: 100.5714,
-    current: 4,
-    max: 8,
-    status: 'open',
-    cuisineEmoji: '🍣',
-    datetime: '2026-04-18T19:00:00',
-  },
-  {
-    id: '2',
-    title: 'Weekend Hotpot Feast 🫕',
-    restaurant: 'Haidilao, Siam Paragon',
-    lat: 13.7465,
-    lng: 100.5327,
-    current: 2,
-    max: 10,
-    status: 'open',
-    cuisineEmoji: '🫕',
-    datetime: '2026-04-19T18:30:00',
-  },
-  {
-    id: '3',
-    title: 'Best Pad Thai in Town 🍜',
-    restaurant: 'Thipsamai, Old Town',
-    lat: 13.7563,
-    lng: 100.5018,
-    current: 5,
-    max: 6,
-    status: 'confirmed',
-    cuisineEmoji: '🍜',
-    datetime: '2026-04-17T12:00:00',
-  },
-  {
-    id: '4',
-    title: 'Korean BBQ Night 🔥',
-    restaurant: 'Maple House, Ari',
-    lat: 13.7804,
-    lng: 100.5404,
-    current: 3,
-    max: 8,
-    status: 'open',
-    cuisineEmoji: '🍖',
-    datetime: '2026-04-20T19:30:00',
-  },
-  {
-    id: '5',
-    title: 'Italian Wine Dinner 🍷',
-    restaurant: 'Appia, Ekkamai',
-    lat: 13.7273,
-    lng: 100.5826,
-    current: 6,
-    max: 8,
-    status: 'closed',
-    cuisineEmoji: '🍝',
-    datetime: '2026-04-16T19:00:00',
-  },
-  {
-    id: '6',
-    title: 'Dim Sum Brunch 🥟',
-    restaurant: 'Tim Ho Wan, Central Embassy',
-    lat: 13.7462,
-    lng: 100.5373,
-    current: 2,
-    max: 6,
-    status: 'open',
-    cuisineEmoji: '🥟',
-    datetime: '2026-04-21T10:30:00',
-  },
-];
-
 const DEFAULT_CENTER: [number, number] = [13.7563, 100.5018]; // Bangkok
 
 interface NearbyMapProps {
@@ -91,15 +15,39 @@ interface NearbyMapProps {
   locale: string;
 }
 
+interface MapMeal {
+  id: string;
+  title: string;
+  restaurant: string;
+  lat: number;
+  lng: number;
+  current: number;
+  max: number;
+  status: string;
+  cuisineEmoji: string;
+  datetime: string;
+}
+
 export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, openMealsText, locale }: NearbyMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const router = useRouter();
+  const [locating, setLocating] = useState(true);
+  const [locateError, setLocateError] = useState(false);
+  const [meals, setMeals] = useState<MapMeal[]>([]);
+  const markersRef = useRef<any[]>([]);
 
+  // Load meals from API (currently returns empty — will be replaced with Supabase)
+  useEffect(() => {
+    // TODO: Replace with actual Supabase query
+    // Example: const { data } = await supabase.from('meals').select('*').eq('status', 'open');
+    setMeals([]);
+  }, []);
+
+  // Initialize map
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Dynamic import leaflet (SSR-safe)
     let L: any = null;
     let map: any = null;
 
@@ -129,83 +77,44 @@ export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, open
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            map.setView([pos.coords.latitude, pos.coords.longitude], 13);
+            setLocating(false);
+            map.setView([pos.coords.latitude, pos.coords.longitude], 14);
 
-            // Add user location marker (blue dot)
+            // Add user location marker (blue dot with pulse ring)
             const userIcon = L.divIcon({
               className: 'user-location-dot',
-              html: `<div style="width:16px;height:16px;background:#3B82F6;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>`,
-              iconSize: [16, 16],
-              iconAnchor: [8, 8],
+              html: `
+                <div style="position:relative;width:40px;height:40px;">
+                  <div style="position:absolute;inset:0;background:rgba(59,130,246,0.15);border-radius:50%;animation:userPulse 2s ease-out infinite;"></div>
+                  <div style="position:absolute;top:12px;left:12px;width:16px;height:16px;background:#3B82F6;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+                </div>
+              `,
+              iconSize: [40, 40],
+              iconAnchor: [20, 20],
             });
-            L.marker([pos.coords.latitude, pos.coords.longitude], { icon: userIcon }).addTo(map);
+            L.marker([pos.coords.latitude, pos.coords.longitude], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+
+            // Add pulse animation style
+            const style = document.createElement('style');
+            style.textContent = `
+              @keyframes userPulse {
+                0% { transform: scale(0.5); opacity: 1; }
+                100% { transform: scale(2); opacity: 0; }
+              }
+            `;
+            document.head.appendChild(style);
           },
           () => {
-            // Location denied - stay at default center
+            setLocating(false);
+            setLocateError(true);
+            // Stay at default center (Bangkok)
           },
-          { enableHighAccuracy: false, timeout: 5000 }
+          { enableHighAccuracy: false, timeout: 10000 }
         );
+      } else {
+        setLocating(false);
+        setLocateError(true);
       }
-
-      // Add meal markers
-      DEMO_MAP_MEALS.forEach((meal) => {
-        const isOpen = meal.status === 'open';
-        const isConfirmed = meal.status === 'confirmed';
-        const pinColor = isOpen ? '#FF6B6B' : isConfirmed ? '#22C55E' : '#9CA3AF';
-
-        const icon = L.divIcon({
-          className: 'meal-pin',
-          html: `
-            <div style="
-              width: 36px; height: 36px;
-              background: ${pinColor};
-              border: 3px solid white;
-              border-radius: 50% 50% 50% 0;
-              transform: rotate(-45deg);
-              box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-              display: flex; align-items: center; justify-content: center;
-              font-size: 16px;
-            ">
-              <span style="transform: rotate(45deg)">${meal.cuisineEmoji}</span>
-            </div>
-          `,
-          iconSize: [36, 36],
-          iconAnchor: [18, 36],
-          popupAnchor: [0, -36],
-        });
-
-        const timeStr = new Date(meal.datetime).toLocaleDateString(
-          locale === 'th' ? 'th-TH' : locale, {
-            month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-          }
-        );
-
-        const popup = L.popup({
-          closeButton: false,
-          className: 'meal-popup',
-          offset: [0, 0],
-        }).setContent(`
-          <div style="min-width:200px;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
-            <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${meal.title}</div>
-            <div style="font-size:12px;color:#666;margin-bottom:6px">📍 ${meal.restaurant}</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:#888">
-              <span>📅 ${timeStr}</span>
-              <span>👥 ${meal.current}/${meal.max}</span>
-            </div>
-            <a href="/${locale}/meals/${meal.id}" style="
-              display:block;text-align:center;padding:6px 0;
-              background:${isOpen ? '#FF6B6B' : '#e5e7eb'};
-              color:white;border-radius:8px;font-size:12px;font-weight:600;
-              text-decoration:none;cursor:pointer;
-            ">${viewDetailsText}</a>
-          </div>
-        `);
-
-        L.marker([meal.lat, meal.lng], { icon })
-          .addTo(map)
-          .bindPopup(popup);
-      });
     };
 
     initMap();
@@ -218,7 +127,82 @@ export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, open
     };
   }, [locale, viewDetailsText]);
 
-  const openMealsCount = DEMO_MAP_MEALS.filter((m) => m.status === 'open').length;
+  // Update meal markers when meals change
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    const map = mapInstanceRef.current;
+    const L = (window as any).L;
+    if (!L) return;
+
+    // Remove existing markers
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    // Add new markers
+    meals.forEach((meal) => {
+      const isOpen = meal.status === 'open';
+      const isConfirmed = meal.status === 'confirmed';
+      const pinColor = isOpen ? '#FF6B6B' : isConfirmed ? '#22C55E' : '#9CA3AF';
+
+      const icon = L.divIcon({
+        className: 'meal-pin',
+        html: `
+          <div style="
+            width: 36px; height: 36px;
+            background: ${pinColor};
+            border: 3px solid white;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+          ">
+            <span style="transform: rotate(45deg)">${meal.cuisineEmoji}</span>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -36],
+      });
+
+      const timeStr = new Date(meal.datetime).toLocaleDateString(
+        locale === 'th' ? 'th-TH' : locale, {
+          month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        }
+      );
+
+      const popup = L.popup({
+        closeButton: false,
+        className: 'meal-popup',
+        offset: [0, 0],
+      }).setContent(`
+        <div style="min-width:200px;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${meal.title}</div>
+          <div style="font-size:12px;color:#666;margin-bottom:6px">📍 ${meal.restaurant}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:#888">
+            <span>📅 ${timeStr}</span>
+            <span>👥 ${meal.current}/${meal.max}</span>
+          </div>
+          <a href="/${locale}/meals/${meal.id}" style="
+            display:block;text-align:center;padding:6px 0;
+            background:${isOpen ? '#FF6B6B' : '#e5e7eb'};
+            color:white;border-radius:8px;font-size:12px;font-weight:600;
+            text-decoration:none;cursor:pointer;
+          ">${viewDetailsText}</a>
+        </div>
+      `);
+
+      const marker = L.marker([meal.lat, meal.lng], { icon })
+        .addTo(map)
+        .bindPopup(popup);
+
+      markersRef.current.push(marker);
+    });
+  }, [meals, locale, viewDetailsText]);
+
+  const openMealsCount = meals.filter((m) => m.status === 'open').length;
 
   return (
     <div className="mb-6">
@@ -245,6 +229,18 @@ export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, open
             className="w-full"
             style={{ height: '280px' }}
           />
+          {/* Location Status Overlay */}
+          {locating && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm text-xs text-gray-600 flex items-center gap-1.5 z-[1000] pointer-events-none">
+              <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              {locale === 'zh-CN' ? '定位中...' : locale === 'th' ? 'กำลังหาตำแหน่ง...' : 'Locating...'}
+            </div>
+          )}
+          {locateError && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm text-xs text-gray-500 z-[1000] pointer-events-none">
+              {locale === 'zh-CN' ? '📍 使用預設位置（曼谷）' : locale === 'th' ? '📍 ใช้ตำแหน่งเริ่มต้น (กรุงเทพฯ)' : '📍 Using default location (Bangkok)'}
+            </div>
+          )}
         </div>
 
         {/* Map Legend */}
@@ -252,7 +248,7 @@ export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, open
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-[#FF6B6B]" />
             <span className="text-[11px] text-gray">
-              {locale === 'zh-CN' ? '报名中' : locale === 'th' ? 'เปิดรับสมัคร' : 'Open'}
+              {locale === 'zh-CN' ? '報名中' : locale === 'th' ? 'เปิดรับสมัคร' : 'Open'}
             </span>
           </div>
           <div className="flex items-center gap-1.5">

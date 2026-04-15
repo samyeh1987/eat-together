@@ -27,85 +27,8 @@ import dynamic from 'next/dynamic';
 // Dynamically import map to avoid SSR issues with leaflet
 const NearbyMap = dynamic(() => import('@/components/map/NearbyMap'), { ssr: false });
 
-// Demo meal data for UI preview
-const DEMO_MEALS = [
-  {
-    id: '1',
-    title: 'Friday Night Izakaya 🍶',
-    restaurant: 'Ninja Izakaya, Thonglor',
-    cuisine: 'japanese',
-    cuisineEmoji: '🍣',
-    languages: [{ key: 'en', flag: '🇬🇧' }, { key: 'th', flag: '🇹🇭' }],
-    datetime: '2026-04-18T19:00:00',
-    current: 4,
-    min: 3,
-    max: 8,
-    payment: 'splitBill',
-    paymentEmoji: '💰',
-    note: 'Language Exchange',
-    status: 'open',
-    creatorName: 'Sarah K.',
-    creatorCredit: 'good',
-    creatorAvatar: null,
-  },
-  {
-    id: '2',
-    title: 'Weekend Hotpot Feast 🫕',
-    restaurant: 'Haidilao, Siam Paragon',
-    cuisine: 'hotpot',
-    cuisineEmoji: '🫕',
-    languages: [{ key: 'zh', flag: '🇨🇳' }, { key: 'en', flag: '🇬🇧' }],
-    datetime: '2026-04-19T18:30:00',
-    current: 2,
-    min: 4,
-    max: 10,
-    payment: 'splitBill',
-    paymentEmoji: '💰',
-    note: 'Startup Sharing',
-    status: 'open',
-    creatorName: 'Alex W.',
-    creatorCredit: 'excellent',
-    creatorAvatar: null,
-  },
-  {
-    id: '3',
-    title: 'Best Pad Thai in Town 🍜',
-    restaurant: 'Thipsamai, Old Town',
-    cuisine: 'thai',
-    cuisineEmoji: '🍜',
-    languages: [{ key: 'en', flag: '🇬🇧' }],
-    datetime: '2026-04-17T12:00:00',
-    current: 5,
-    min: 2,
-    max: 6,
-    payment: 'splitBill',
-    paymentEmoji: '💰',
-    note: null,
-    status: 'confirmed',
-    creatorName: 'Somchai P.',
-    creatorCredit: 'good',
-    creatorAvatar: null,
-  },
-  {
-    id: '4',
-    title: 'Korean BBQ Night 🔥',
-    restaurant: 'Maple House, Ari',
-    cuisine: 'korean',
-    cuisineEmoji: '🍖',
-    languages: [{ key: 'zh', flag: '🇨🇳' }, { key: 'ko', flag: '🇰🇷' }],
-    datetime: '2026-04-20T19:30:00',
-    current: 3,
-    min: 4,
-    max: 8,
-    payment: 'hostTreats',
-    paymentEmoji: '🎉',
-    note: 'Expat Meetup',
-    status: 'open',
-    creatorName: 'Mike L.',
-    creatorCredit: 'average',
-    creatorAvatar: null,
-  },
-];
+// Demo meal data removed — will be replaced with Supabase query
+const DEMO_MEALS: any[] = [];
 
 const statusColors: Record<string, string> = {
   open: 'bg-blue-100 text-blue-700',
@@ -395,7 +318,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {DEMO_MEALS.map((meal, i) => (
+            {DEMO_MEALS.length > 0 ? DEMO_MEALS.map((meal: any, i: number) => (
               <motion.div
                 key={meal.id}
                 initial={{ opacity: 0, y: 15 }}
@@ -424,7 +347,7 @@ export default function HomePage() {
 
                     {/* Languages + Note row */}
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      {meal.languages.map((lang) => (
+                      {meal.languages.map((lang: any) => (
                         <span key={lang.key} className="tag text-[11px]">
                           {lang.flag} {t(`language.${lang.key}`)}
                         </span>
@@ -475,7 +398,25 @@ export default function HomePage() {
                   </div>
                 </Link>
               </motion.div>
-            ))}
+            )) : (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card p-8 text-center"
+              >
+                <div className="text-4xl mb-3">🍽️</div>
+                <p className="text-sm text-gray font-medium">
+                  {locale === 'zh-CN' ? '尚未有飯局，快來發起第一場吧！' : locale === 'th' ? 'ยังไม่มีมื้ออาหาร มาเริ่มต้นเลย!' : 'No meals yet. Be the first to host one!'}
+                </p>
+                <Link
+                  href={`/${locale}/meals/create`}
+                  className="btn-primary inline-flex items-center gap-2 py-2.5 px-5 text-sm mt-4"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t('home.heroCreate')}
+                </Link>
+              </motion.div>
+            )}
           </div>
         </div>
       </section>
