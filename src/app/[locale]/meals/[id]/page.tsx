@@ -58,11 +58,11 @@ const statusColors: Record<string, string> = {
   completed: 'bg-gray-100 text-gray',
 };
 
-const creditStars: Record<string, string> = {
-  excellent: '5',
-  good: '4',
-  average: '3',
-  newbie: '1',
+const creditStars: Record<string, number> = {
+  excellent: 5,
+  good: 4,
+  average: 3,
+  newbie: 1,
 };
 
 export default function MealDetailPage() {
