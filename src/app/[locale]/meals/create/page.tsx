@@ -570,7 +570,7 @@ export default function CreateMealPage() {
 
       {/* Bottom Actions (Step 1 & 2) */}
       {step < 3 && (
-        <div className="fixed bottom-0 left-0 right-0 safe-bottom bg-cream border-t border-gray-lighter/50 px-4 py-3 flex gap-3">
+        <div className="fixed bottom-0 left-0 right-0 z-50 safe-bottom bg-cream border-t border-gray-lighter/50 px-4 py-3 flex gap-3">
           {step > 1 && (
             <button type="button" onClick={goBack} className="btn-secondary flex-1">
               {t('common.back')}

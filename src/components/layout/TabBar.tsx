@@ -18,6 +18,11 @@ export default function TabBar() {
   const locale = useLocale();
   const pathname = usePathname();
 
+  // Hide TabBar on certain pages (form pages, login, etc.)
+  const hidePaths = ['/meals/create', '/auth/'];
+  const shouldHide = hidePaths.some((p) => pathname.includes(p));
+  if (shouldHide) return null;
+
   const tabs = [
     {
       href: `/${locale}`,
