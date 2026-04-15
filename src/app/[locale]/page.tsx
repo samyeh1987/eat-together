@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   UtensilsCrossed,
   Plus,
@@ -15,6 +17,8 @@ import {
   Sparkles,
   MapPin,
   Calendar,
+  Globe,
+  ChevronDown,
 } from 'lucide-react';
 
 // Demo meal data for UI preview
@@ -68,8 +72,8 @@ const DEMO_MEALS = [
     current: 5,
     min: 2,
     max: 6,
-    payment: 'payOwn',
-    paymentEmoji: '💳',
+    payment: 'splitBill',
+    paymentEmoji: '💰',
     note: null,
     status: 'confirmed',
     creatorName: 'Somchai P.',
@@ -114,6 +118,22 @@ const creditColors: Record<string, string> = {
 export default function HomePage() {
   const t = useTranslations();
   const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [showLangMenu, setShowLangMenu] = useState(false);
+
+  const locales = [
+    { code: 'zh-CN', label: '中文', flag: '🇨🇳' },
+    { code: 'en', label: 'English', flag: '🇬🇧' },
+    { code: 'th', label: 'ไทย', flag: '🇹🇭' },
+  ];
+
+  const switchLocale = (newLocale: string) => {
+    const segments = pathname.split('/');
+    segments[1] = newLocale;
+    router.push(segments.join('/'));
+    setShowLangMenu(false);
+  };
 
   return (
     <div className="min-h-screen pb-20">
@@ -135,6 +155,47 @@ export default function HomePage() {
                 Eat<span className="text-primary">Together</span>
               </span>
             </div>
+          <div className="flex items-center gap-2">
+            {/* Language Switcher */}
+            <div className="relative">
+              <button
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="flex items-center gap-1 p-2 rounded-xl text-gray hover:text-dark hover:bg-white/50 transition-all"
+              >
+                <Globe className="w-5 h-5" />
+                <ChevronDown className={`w-3 h-3 transition-transform ${showLangMenu ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {showLangMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowLangMenu(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-12 z-50 bg-white rounded-xl shadow-lg border border-gray-lighter/50 py-1.5 min-w-[140px] overflow-hidden"
+                    >
+                      {locales.map((l) => (
+                        <button
+                          key={l.code}
+                          onClick={() => switchLocale(l.code)}
+                          className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
+                            locale === l.code ? 'bg-primary/5 text-primary font-semibold' : 'text-dark hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="text-base">{l.flag}</span>
+                          <span>{l.label}</span>
+                          {locale === l.code && (
+                            <span className="ml-auto text-primary text-xs">✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
             <Link
               href={`/${locale}/notifications`}
               className="relative p-2 rounded-xl text-gray hover:text-dark hover:bg-white/50 transition-all"
@@ -142,6 +203,7 @@ export default function HomePage() {
               <Sparkles className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-coral rounded-full" />
             </Link>
+          </div>
           </div>
 
           {/* Hero Content */}

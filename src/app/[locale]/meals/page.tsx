@@ -64,8 +64,8 @@ const DEMO_MEALS = [
     current: 5,
     min: 2,
     max: 6,
-    payment: 'payOwn',
-    paymentEmoji: '💳',
+    payment: 'splitBill',
+    paymentEmoji: '💰',
     note: null,
     status: 'confirmed',
     creatorName: 'Somchai P.',
@@ -100,8 +100,8 @@ const DEMO_MEALS = [
     current: 6,
     min: 2,
     max: 8,
-    payment: 'payOwn',
-    paymentEmoji: '💳',
+    payment: 'splitBill',
+    paymentEmoji: '💰',
     note: null,
     status: 'ongoing',
     creatorName: 'Emma T.',
@@ -190,7 +190,7 @@ const creditStars: Record<string, string> = {
 // Filter options
 const CUISINE_OPTIONS = ['japanese', 'thai', 'chinese', 'korean', 'italian', 'hotpot', 'mexican'] as const;
 const LANGUAGE_OPTIONS = ['en', 'zh', 'th', 'ja', 'ko'] as const;
-const PAYMENT_OPTIONS = ['hostTreats', 'splitBill', 'payOwn'] as const;
+const PAYMENT_OPTIONS = ['hostTreats', 'splitBill'] as const;
 
 export default function MealsPage() {
   const t = useTranslations();

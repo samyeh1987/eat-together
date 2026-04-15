@@ -46,7 +46,6 @@ export const MEAL_LANGUAGES = [
 export const PAYMENT_METHODS = [
   { key: 'hostTreats', emoji: '🎉' },
   { key: 'splitBill', emoji: '💰' },
-  { key: 'payOwn', emoji: '💳' },
 ] as const;
 
 // Meal tags

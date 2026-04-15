@@ -24,7 +24,7 @@ import {
   MEAL_TAGS,
 } from '@/lib/constants';
 
-type PaymentKey = 'hostTreats' | 'splitBill' | 'payOwn';
+type PaymentKey = 'hostTreats' | 'splitBill';
 
 interface MealForm {
   title: string;
@@ -247,7 +247,7 @@ function Step2({ form, updateField, toggleArrayItem, t }: {
           <CreditCard size={16} className="text-primary" />
           {t('meal.paymentMethod')}
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {PAYMENT_METHODS.map((pm) => (
             <button
               key={pm.key}
