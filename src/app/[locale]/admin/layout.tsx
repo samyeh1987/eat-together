@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import "../globals.css";
 import AdminLayoutClient from "./AdminLayoutClient";
+import AdminPageWrapper from "./AdminPageWrapper";
 
 export const metadata: Metadata = {
   title: "EatTogether Admin",
@@ -13,8 +13,10 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex">
-      <AdminLayoutClient>{children}</AdminLayoutClient>
-    </div>
+    <AdminPageWrapper>
+      <div className="min-h-screen bg-[#F8F9FA] flex">
+        <AdminLayoutClient>{children}</AdminLayoutClient>
+      </div>
+    </AdminPageWrapper>
   );
 }

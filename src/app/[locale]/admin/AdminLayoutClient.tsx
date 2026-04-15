@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import {
   LayoutDashboard,
   Users,
@@ -20,18 +21,20 @@ import {
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/meals', label: 'Meals', icon: UtensilsCrossed },
-  { href: '/admin/restaurants', label: 'Restaurants', icon: Store },
-  { href: '/admin/reports', label: 'Reports', icon: AlertTriangle, badge: 3 },
-  { href: '/admin/photos', label: 'Photos', icon: ImageIcon },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: 'admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: 'admin/users', label: 'Users', icon: Users },
+  { href: 'admin/meals', label: 'Meals', icon: UtensilsCrossed },
+  { href: 'admin/restaurants', label: 'Restaurants', icon: Store },
+  { href: 'admin/reports', label: 'Reports', icon: AlertTriangle, badge: 3 },
+  { href: 'admin/photos', label: 'Photos', icon: ImageIcon },
+  { href: 'admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const locale = useLocale();
+  const adminPath = `/${locale}/admin`;
 
   return (
     <>
@@ -53,7 +56,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
-            <Link href="/admin" className="flex items-center gap-2.5">
+            <Link href={adminPath} className="flex items-center gap-2.5">
               <div className="w-9 h-9 bg-gradient-to-br from-[#FF6B35] to-[#FF6B6B] rounded-xl flex items-center justify-center shadow-sm">
                 <UtensilsCrossed className="w-5 h-5 text-white" />
               </div>
@@ -75,15 +78,16 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {navItems.map((item) => {
+              const fullPath = `/${locale}/${item.href}`;
               const isActive = item.exact
-                ? pathname === item.href
-                : pathname.startsWith(item.href);
+                ? pathname === fullPath
+                : pathname.startsWith(fullPath);
               const Icon = item.icon;
 
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={fullPath}
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group',
@@ -121,7 +125,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
           <div className="px-3 py-4 border-t border-gray-100">
             {/* View frontend link */}
             <Link
-              href="/en"
+              href={`/${locale}`}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all"
             >
               <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -152,12 +156,12 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
               </button>
               {/* Breadcrumb */}
               <div className="hidden sm:flex items-center gap-1.5 text-sm">
-                <span className="text-gray-400">Admin</span>
-                {pathname !== '/admin' && (
+                <Link href={adminPath} className="text-gray-400 hover:text-gray-600 transition-colors">Admin</Link>
+                {pathname !== adminPath && (
                   <>
                     <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
                     <span className="text-gray-700 font-medium capitalize">
-                      {pathname.split('/').pop()}
+                      {pathname.replace(`/${locale}/admin`, '') || 'Dashboard'}
                     </span>
                   </>
                 )}
