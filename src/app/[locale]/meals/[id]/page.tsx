@@ -59,10 +59,10 @@ const statusColors: Record<string, string> = {
 };
 
 const creditStars: Record<string, string> = {
-  excellent: 5,
-  good: 4,
-  average: 3,
-  newbie: 1,
+  excellent: '5',
+  good: '4',
+  average: '3',
+  newbie: '1',
 };
 
 export default function MealDetailPage() {
