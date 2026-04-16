@@ -128,6 +128,13 @@ export async function joinMeal(mealId: string): Promise<{ success: boolean; erro
 
   if (!user) return { success: false, error: 'Not authenticated' };
 
+  // Get meal info for notification
+  const { data: meal } = await supabase
+    .from('meals')
+    .select('creator_id, title')
+    .eq('id', mealId)
+    .single();
+
   const { error } = await supabase
     .from('meal_participants')
     .insert({
@@ -141,6 +148,23 @@ export async function joinMeal(mealId: string): Promise<{ success: boolean; erro
     return { success: false, error: error.message };
   }
 
+  // Notify meal host (fire-and-forget)
+  if (meal && meal.creator_id !== user.id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('nickname')
+      .eq('id', user.id)
+      .single();
+    createNotification({
+      userId: meal.creator_id,
+      type: 'joined',
+      title: profile?.nickname || 'Someone',
+      message: `joined your "${meal.title}"`,
+      mealId,
+      actorId: user.id,
+    }).catch(() => {});
+  }
+
   return { success: true };
 }
 
@@ -150,6 +174,13 @@ export async function leaveMeal(mealId: string): Promise<{ success: boolean; err
 
   if (!user) return { success: false, error: 'Not authenticated' };
 
+  // Get meal info for notification
+  const { data: meal } = await supabase
+    .from('meals')
+    .select('creator_id, title')
+    .eq('id', mealId)
+    .single();
+
   const { error } = await supabase
     .from('meal_participants')
     .update({ status: 'cancelled' })
@@ -157,11 +188,37 @@ export async function leaveMeal(mealId: string): Promise<{ success: boolean; err
     .eq('user_id', user.id);
 
   if (error) return { success: false, error: error.message };
+
+  // Notify meal host (fire-and-forget)
+  if (meal && meal.creator_id !== user.id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('nickname')
+      .eq('id', user.id)
+      .single();
+    createNotification({
+      userId: meal.creator_id,
+      type: 'leave',
+      title: profile?.nickname || 'Someone',
+      message: `left your "${meal.title}"`,
+      mealId,
+      actorId: user.id,
+    }).catch(() => {});
+  }
+
   return { success: true };
 }
 
 export async function cancelMeal(mealId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Get meal info for notification to participants
+  const { data: meal } = await supabase
+    .from('meals')
+    .select('title')
+    .eq('id', mealId)
+    .single();
 
   const { error } = await supabase
     .from('meals')
@@ -169,6 +226,31 @@ export async function cancelMeal(mealId: string): Promise<{ success: boolean; er
     .eq('id', mealId);
 
   if (error) return { success: false, error: error.message };
+
+  // Notify all participants (fire-and-forget)
+  if (meal) {
+    const { data: participants } = await supabase
+      .from('meal_participants')
+      .select('user_id')
+      .eq('meal_id', mealId)
+      .eq('status', 'approved');
+    if (participants) {
+      await Promise.all(
+        participants
+          .filter((p) => p.user_id !== user?.id)
+          .map((p) =>
+            createNotification({
+              userId: p.user_id,
+              type: 'cancelled',
+              title: 'Meal Cancelled',
+              message: `"${meal.title}" has been cancelled`,
+              mealId,
+            }).catch(() => {})
+          )
+      );
+    }
+  }
+
   return { success: true };
 }
 
@@ -332,6 +414,85 @@ export async function fetchMealStats(): Promise<{ totalMeals: number; totalUsers
     totalUsers: totalUsers || 0,
     activeMeals: activeMeals || 0,
   };
+}
+
+// =============================================
+// Notifications
+// =============================================
+
+export async function fetchNotifications(userId: string): Promise<any[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('fetchNotifications error:', error);
+    return [];
+  }
+  return (data || []).map((n: any) => ({
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    message: n.message,
+    data: n.data || {},
+    read: n.read,
+    created_at: n.created_at,
+    // Relative time will be computed on client
+  }));
+}
+
+export async function fetchUnreadNotificationCount(userId: string): Promise<number> {
+  const supabase = createClient();
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('read', false);
+
+  if (error) return 0;
+  return count || 0;
+}
+
+export async function markNotificationRead(notifId: string): Promise<void> {
+  const supabase = createClient();
+  await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('id', notifId);
+}
+
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+  const supabase = createClient();
+  await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('user_id', userId)
+    .eq('read', false);
+}
+
+export async function createNotification(data: {
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  mealId?: string;
+  actorId?: string;
+}): Promise<void> {
+  const supabase = createClient();
+  await supabase.from('notifications').insert({
+    user_id: data.userId,
+    type: data.type,
+    title: data.title,
+    message: data.message,
+    data: {
+      meal_id: data.mealId || null,
+      actor_id: data.actorId || null,
+    },
+  });
 }
 
 // =============================================

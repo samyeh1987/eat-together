@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -12,11 +13,27 @@ import {
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth-store';
+import { fetchUnreadNotificationCount } from '@/lib/api';
 
 export default function TabBar() {
   const t = useTranslations();
   const locale = useLocale();
   const pathname = usePathname();
+  const { user } = useAuthStore();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    if (!user?.id) {
+      setUnreadCount(0);
+      return;
+    }
+    (async () => {
+      const count = await fetchUnreadNotificationCount(user!.id);
+      setUnreadCount(count);
+    })();
+  }, [user?.id, pathname]); // re-fetch on page change
 
   // Hide TabBar on form pages, login, and meal detail pages
   const isCreatePage = pathname.includes('/meals/create');
@@ -50,6 +67,7 @@ export default function TabBar() {
       label: t('nav.notifications'),
       icon: Bell,
       activeIcon: Bell,
+      badge: unreadCount,
     },
     {
       href: `/${locale}/profile`,
