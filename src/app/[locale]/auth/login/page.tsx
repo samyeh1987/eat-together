@@ -56,13 +56,15 @@ export default function LoginPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/${locale}/meals`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=/${locale}/meals`,
         },
       });
       if (error) {
         setError(error.message);
       } else {
-        setSuccess('Check your email for a confirmation link! 📧');
+        // Redirect to verify page with email prefilled
+        router.push(`/${locale}/auth/verify?email=${encodeURIComponent(email)}`);
+        return;
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -189,6 +191,18 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+
+            {/* Forgot password (login mode only) */}
+            {mode === 'login' && (
+              <div className="flex justify-end">
+                <Link
+                  href={`/${locale}/auth/reset-password`}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            )}
 
             {/* Error / Success */}
             <AnimatePresence>
