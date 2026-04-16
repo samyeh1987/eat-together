@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { fetchOpenMeals } from '@/lib/api';
 
 const DEFAULT_CENTER: [number, number] = [13.7563, 100.5018]; // Bangkok
+
+const CUISINE_EMOJI: Record<string, string> = {
+  japanese: '🍣', thai: '🍜', chinese: '🥡', korean: '🍖', italian: '🍕',
+  western: '🥩', hotpot: '🫕', bbq: '🔥', buffet: '🍽️', seafood: '🦐',
+  dimsum: '🥟', vegetarian: '🥗', other: '🍴',
+};
 
 interface NearbyMapProps {
   mapTitle: string;
@@ -23,6 +30,7 @@ interface MapMeal {
   lng: number;
   current: number;
   max: number;
+  min: number;
   status: string;
   cuisineEmoji: string;
   datetime: string;
@@ -31,17 +39,39 @@ interface MapMeal {
 export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, openMealsText, locale }: NearbyMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const leafletRef = useRef<any>(null);
   const router = useRouter();
   const [locating, setLocating] = useState(true);
   const [locateError, setLocateError] = useState(false);
   const [meals, setMeals] = useState<MapMeal[]>([]);
   const markersRef = useRef<any[]>([]);
 
-  // Load meals from API (currently returns empty — will be replaced with Supabase)
+  // Load meals from Supabase
   useEffect(() => {
-    // TODO: Replace with actual Supabase query
-    // Example: const { data } = await supabase.from('meals').select('*').eq('status', 'open');
-    setMeals([]);
+    async function loadMeals() {
+      try {
+        const data = await fetchOpenMeals();
+        const mapMeals: MapMeal[] = data
+          .filter((m: any) => m.latitude && m.longitude)
+          .map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            restaurant: m.restaurant_name,
+            lat: m.latitude,
+            lng: m.longitude,
+            current: m._currentParticipants ?? m.participants?.length ?? 1,
+            max: m.max_participants,
+            min: m.min_participants,
+            status: m.status,
+            cuisineEmoji: m._cuisineEmoji || CUISINE_EMOJI[m.cuisine_type] || '🍴',
+            datetime: m.datetime,
+          }));
+        setMeals(mapMeals);
+      } catch (err) {
+        console.error('Failed to load meals for map:', err);
+      }
+    }
+    loadMeals();
   }, []);
 
   // Initialize map
@@ -54,6 +84,7 @@ export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, open
     const initMap = async () => {
       const leaflet = await import('leaflet');
       L = leaflet.default || leaflet;
+      leafletRef.current = L;
 
       // Fix default marker icon
       delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -62,6 +93,15 @@ export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, open
         iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
       });
+
+      // Add Leaflet CSS
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+        document.head.appendChild(link);
+      }
 
       map = L.map(mapRef.current!, {
         zoomControl: false,
@@ -129,11 +169,10 @@ export default function NearbyMap({ mapTitle, mapSubtitle, viewDetailsText, open
 
   // Update meal markers when meals change
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !leafletRef.current) return;
 
     const map = mapInstanceRef.current;
-    const L = (window as any).L;
-    if (!L) return;
+    const L = leafletRef.current;
 
     // Remove existing markers
     markersRef.current.forEach(m => m.remove());

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -23,12 +23,21 @@ import {
   BadgePercent,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { fetchMealStats, fetchOpenMeals } from '@/lib/api';
 
 // Dynamically import map to avoid SSR issues with leaflet
 const NearbyMap = dynamic(() => import('@/components/map/NearbyMap'), { ssr: false });
 
-// Demo meal data removed — will be replaced with Supabase query
-const DEMO_MEALS: any[] = [];
+const CUISINE_EMOJI: Record<string, string> = {
+  japanese: '🍣', thai: '🍜', chinese: '🥡', korean: '🍖', italian: '🍕',
+  western: '🥩', hotpot: '🫕', bbq: '🔥', buffet: '🍽️', seafood: '🦐',
+  dimsum: '🥟', vegetarian: '🥗', other: '🍴',
+};
+
+const FLAG_MAP: Record<string, { key: string; flag: string }> = {
+  zh: { key: 'zh', flag: '🇨🇳' }, en: { key: 'en', flag: '🇬🇧' },
+  th: { key: 'th', flag: '🇹🇭' }, ja: { key: 'ja', flag: '🇯🇵' }, ko: { key: 'ko', flag: '🇰🇷' },
+};
 
 const statusColors: Record<string, string> = {
   open: 'bg-blue-100 text-blue-700',
@@ -50,6 +59,42 @@ export default function HomePage() {
   const router = useRouter();
   const pathname = usePathname();
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [stats, setStats] = useState<{ totalMeals: number; totalUsers: number; activeMeals: number }>({
+    totalMeals: 0, totalUsers: 0, activeMeals: 0,
+  });
+  const [recentMeals, setRecentMeals] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [statsData, mealsData] = await Promise.all([
+          fetchMealStats(),
+          fetchOpenMeals(),
+        ]);
+        setStats(statsData);
+        // Show up to 5 recent open/confirmed meals on homepage
+        const display = mealsData
+          .filter((m: any) => m.status === 'open' || m.status === 'confirmed')
+          .slice(0, 5)
+          .map((m: any) => ({
+            ...m,
+            restaurant: m.restaurant_name,
+            current: m._currentParticipants ?? m.participants?.length ?? 1,
+            max: m.max_participants,
+            min: m.min_participants,
+            cuisineEmoji: m._cuisineEmoji || CUISINE_EMOJI[m.cuisine_type] || '🍴',
+            languages: m._languages || (m.meal_languages || []).map((l: string) => FLAG_MAP[l] || { key: l, flag: '🌍' }),
+            paymentEmoji: m._paymentEmoji || '💰',
+            creatorName: m.creator?.nickname || 'Foodie',
+            creatorCredit: m.creator?.credit_score >= 90 ? 'excellent' : m.creator?.credit_score >= 70 ? 'good' : 'average',
+          }));
+        setRecentMeals(display);
+      } catch (err) {
+        console.error('Failed to load homepage data:', err);
+      }
+    }
+    loadData();
+  }, []);
 
   const locales = [
     { code: 'zh-CN', label: '中文', flag: '🇨🇳' },
@@ -181,16 +226,16 @@ export default function HomePage() {
               className="flex gap-4 mt-6"
             >
               <div className="bg-white/70 backdrop-blur-sm rounded-xl px-4 py-3 flex-1 text-center shadow-sm">
-                <div className="text-lg font-bold text-dark">1,200+</div>
+                <div className="text-lg font-bold text-dark">{stats.totalMeals}</div>
                 <div className="text-xs text-gray">{locale === 'zh-CN' ? '飯局' : 'Meals Shared'}</div>
               </div>
               <div className="bg-white/70 backdrop-blur-sm rounded-xl px-4 py-3 flex-1 text-center shadow-sm">
-                <div className="text-lg font-bold text-dark">500+</div>
+                <div className="text-lg font-bold text-dark">{stats.totalUsers}</div>
                 <div className="text-xs text-gray">{locale === 'zh-CN' ? '飯友' : 'Foodies'}</div>
               </div>
               <div className="bg-white/70 backdrop-blur-sm rounded-xl px-4 py-3 flex-1 text-center shadow-sm">
-                <div className="text-lg font-bold text-dark">50+</div>
-                <div className="text-xs text-gray">{locale === 'zh-CN' ? '菜系' : 'Cuisines'}</div>
+                <div className="text-lg font-bold text-dark">{stats.activeMeals}</div>
+                <div className="text-xs text-gray">{locale === 'zh-CN' ? '進行中' : 'Active'}</div>
               </div>
             </motion.div>
           </div>
@@ -318,7 +363,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {DEMO_MEALS.length > 0 ? DEMO_MEALS.map((meal: any, i: number) => (
+            {recentMeals.length > 0 ? recentMeals.map((meal: any, i: number) => (
               <motion.div
                 key={meal.id}
                 initial={{ opacity: 0, y: 15 }}
