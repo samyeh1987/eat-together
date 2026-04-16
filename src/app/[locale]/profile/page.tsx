@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Edit3,
@@ -11,38 +13,13 @@ import {
   Award,
   ChevronRight,
   ClipboardList,
-  Camera,
   Plus,
-  Image as ImageIcon,
   X,
+  LogOut,
+  Loader2,
 } from 'lucide-react';
-
-// Demo profile data
-const profile = {
-  nickname: 'Sarah K.',
-  email: 'sarah@example.com',
-  avatar: null,
-  gender: 'female' as const,
-  bio: 'Digital nomad from Taiwan, currently based in Bangkok. Love exploring new restaurants and meeting people from all over the world! 🌏',
-  ageRange: '25-30',
-  occupation: 'Designer',
-  languagesSpoken: ['zh', 'en', 'th'],
-  interests: ['foodie', 'digitalNomad', 'languageExchange', 'photography'],
-  creditScore: 128,
-  mealsHosted: 12,
-  mealsJoined: 8,
-  photos: [
-    'https://picsum.photos/seed/food1/400/400',
-    'https://picsum.photos/seed/travel2/400/400',
-    'https://picsum.photos/seed/bangkok3/400/400',
-  ],
-  creditHistory: [
-    { event: '+10', reason: 'Hosted a meal', date: '2026-04-10' },
-    { event: '+5', reason: 'Completed a meal', date: '2026-04-08' },
-    { event: '-5', reason: 'Late cancellation', date: '2026-04-01' },
-    { event: '+10', reason: 'Email verified', date: '2026-03-25' },
-  ],
-};
+import { useAuthStore } from '@/store/auth-store';
+import { fetchProfile, fetchCreditHistory, fetchMyMeals } from '@/lib/api';
 
 // Language display mapping
 const languageFlags: Record<string, string> = {
@@ -57,7 +34,8 @@ const languageFlags: Record<string, string> = {
 const genderEmoji: Record<string, string> = {
   male: '👨',
   female: '👩',
-  preferNotToSay: '✨',
+  prefer_not_to_say: '✨',
+  other: '✨',
 };
 
 // Credit level calculation
@@ -72,14 +50,70 @@ function getCreditLevel(score: number): { level: string; stars: number; color: s
 export default function ProfilePage() {
   const t = useTranslations();
   const locale = useLocale();
-  const creditInfo = getCreditLevel(profile.creditScore);
+  const router = useRouter();
+  const { user, signOut } = useAuthStore();
+  const [creditHistory, setCreditHistory] = useState<any[]>([]);
+  const [mealsHosted, setMealsHosted] = useState(0);
+  const [mealsJoined, setMealsJoined] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const creditInfo = getCreditLevel(user?.credit_score || 100);
   const photoSlots = 6;
+
+  useEffect(() => {
+    // Wait a tick for AuthProvider to populate user
+    const timer = setTimeout(() => setIsLoading(false), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const [history, myMeals] = await Promise.all([
+        fetchCreditHistory(user!.id),
+        fetchMyMeals(user!.id),
+      ]);
+      setCreditHistory(history);
+      setMealsHosted(myMeals.filter((m: any) => m.role === 'host').length);
+      setMealsJoined(myMeals.filter((m: any) => m.role === 'participant').length);
+    })();
+  }, [user?.id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cream">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-cream gap-4 px-4">
+        <p className="text-gray">{locale === 'zh-CN' ? '請先登入查看個人資料' : 'Please log in to view profile'}</p>
+        <Link href={`/${locale}/auth/login`} className="btn-primary px-6 py-2.5 rounded-xl">
+          {locale === 'zh-CN' ? '登入' : 'Login'}
+        </Link>
+      </div>
+    );
+  }
+
+  const photos: string[] = (user as any).photos || [];
+  const interests = (user.tags || [])
+    .filter((tag: any) => tag?.category === 'interest')
+    .map((tag: any) => tag?.i18n_key?.replace('tag.', '') || tag?.name);
 
   return (
     <div className="min-h-screen pb-20 bg-cream">
       {/* Header with gradient */}
       <div className="relative bg-gradient-to-br from-primary to-coral pt-8 pb-16 px-4">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <button
+            onClick={() => signOut().then(() => router.push(`/${locale}/auth/login`))}
+            className="p-2 rounded-xl bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
           <button className="p-2 rounded-xl bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors">
             <Edit3 className="w-5 h-5" />
           </button>
@@ -95,18 +129,21 @@ export default function ProfilePage() {
           {/* Avatar */}
           <div className="flex flex-col items-center">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-white/30 to-white/10 backdrop-blur-sm border-4 border-white/30 flex items-center justify-center shadow-lg">
-              <span className="text-3xl font-bold text-white">
-                {profile.nickname.charAt(0)}
-              </span>
+              {user.avatar_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={user.avatar_url} alt="avatar" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <span className="text-3xl font-bold text-white">
+                  {(user.nickname || '?').charAt(0)}
+                </span>
+              )}
             </div>
 
             {/* Name & Bio */}
-            <h1 className="mt-4 text-2xl font-bold text-white">{profile.nickname}</h1>
+            <h1 className="mt-4 text-2xl font-bold text-white">{user.nickname || 'Anonymous'}</h1>
             <p className="mt-1 text-sm text-white/80 flex items-center gap-1.5">
-              <span>{genderEmoji[profile.gender] || ''}</span>
-              <span>{t(`profile.gender`)}</span>
-              <span>•</span>
-              <span>{profile.occupation}</span>
+              {(user as any).gender && <span>{genderEmoji[(user as any).gender] || ''}</span>}
+              {(user as any).occupation && <span>{(user as any).occupation}</span>}
             </p>
           </div>
         </motion.div>
@@ -121,15 +158,19 @@ export default function ProfilePage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="card p-4 mb-4"
         >
-          <p className="text-sm text-gray leading-relaxed">{profile.bio}</p>
+          {user.bio ? (
+            <p className="text-sm text-gray leading-relaxed">{user.bio}</p>
+          ) : (
+            <p className="text-sm text-gray-light italic">{locale === 'zh-CN' ? '還沒有自我介紹' : 'No bio yet'}</p>
+          )}
           <div className="flex items-center gap-4 mt-3 text-xs text-gray-light">
-            <span>{profile.ageRange}</span>
-            <span>•</span>
-            <span>{profile.email}</span>
+            {user.age_range && <span>{user.age_range}</span>}
+            {user.age_range && user.email && <span>•</span>}
+            {user.email && <span>{user.email}</span>}
           </div>
         </motion.div>
 
-        {/* Photo Gallery */}
+        {/* Photo Gallery - coming soon placeholder */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -138,10 +179,10 @@ export default function ProfilePage() {
         >
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-dark">{t('profile.photos')}</h3>
-            <span className="text-xs text-gray">{profile.photos.length}/{photoSlots}</span>
+            <span className="text-xs text-gray">{photos.length}/{photoSlots}</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {profile.photos.map((photo, index) => (
+            {photos.map((photo, index) => (
               <div
                 key={index}
                 className="aspect-square rounded-xl overflow-hidden bg-light relative group"
@@ -160,7 +201,7 @@ export default function ProfilePage() {
               </div>
             ))}
             {/* Add photo slots */}
-            {Array.from({ length: photoSlots - profile.photos.length }).map((_, index) => (
+            {Array.from({ length: photoSlots - photos.length }).map((_, index) => (
               <button
                 key={`add-${index}`}
                 className="aspect-square rounded-xl border-2 border-dashed border-gray-lighter flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-colors"
@@ -186,7 +227,7 @@ export default function ProfilePage() {
               <div className="w-10 h-10 mx-auto rounded-xl bg-primary/10 flex items-center justify-center mb-2">
                 <UtensilsCrossed className="w-5 h-5 text-primary" />
               </div>
-              <div className="text-xl font-bold text-dark">{profile.mealsHosted}</div>
+              <div className="text-xl font-bold text-dark">{mealsHosted}</div>
               <div className="text-xs text-gray">{t('profile.mealsHosted')}</div>
             </div>
           </Link>
@@ -197,7 +238,7 @@ export default function ProfilePage() {
               <div className="w-10 h-10 mx-auto rounded-xl bg-mint/10 flex items-center justify-center mb-2">
                 <Users className="w-5 h-5 text-mint" />
               </div>
-              <div className="text-xl font-bold text-dark">{profile.mealsJoined}</div>
+              <div className="text-xl font-bold text-dark">{mealsJoined}</div>
               <div className="text-xs text-gray">{t('profile.mealsJoined')}</div>
             </div>
           </Link>
@@ -207,7 +248,7 @@ export default function ProfilePage() {
             <div className="w-10 h-10 mx-auto rounded-xl bg-gold/10 flex items-center justify-center mb-2">
               <Award className="w-5 h-5 text-gold" />
             </div>
-            <div className="text-xl font-bold text-dark">{profile.creditScore}</div>
+            <div className="text-xl font-bold text-dark">{user.credit_score || 100}</div>
             <div className="text-xs text-gray">{t('profile.creditScore')}</div>
           </div>
         </motion.div>
@@ -228,7 +269,7 @@ export default function ProfilePage() {
                 <div>
                   <h3 className="font-bold text-dark text-sm">{t('nav.myMeals')}</h3>
                   <p className="text-xs text-gray-light">
-                    {profile.mealsHosted + profile.mealsJoined} {t('myMeals.mealsFound', { count: profile.mealsHosted + profile.mealsJoined })}
+                    {mealsHosted + mealsJoined} {t('myMeals.mealsFound', { count: mealsHosted + mealsJoined })}
                   </p>
                 </div>
               </div>
@@ -270,7 +311,7 @@ export default function ProfilePage() {
                 {t(`credit.${creditInfo.level}`)}
               </div>
               <div className="text-xs text-gray">
-                {profile.creditScore} {t('profile.creditScore')}
+                {user.credit_score || 100} {t('profile.creditScore')}
               </div>
             </div>
           </div>
@@ -278,7 +319,7 @@ export default function ProfilePage() {
           {/* Credit History */}
           <h4 className="text-xs font-semibold text-gray mb-2">{t('profile.creditHistory')}</h4>
           <div className="space-y-2">
-            {profile.creditHistory.map((item, index) => (
+            {creditHistory.length > 0 ? creditHistory.map((item: any, index: number) => (
               <div
                 key={index}
                 className="flex items-center justify-between py-2 border-b border-gray-lighter/50 last:border-0"
@@ -286,16 +327,22 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <span
                     className={`text-sm font-bold ${
-                      item.event.startsWith('+') ? 'text-mint' : 'text-coral'
+                      (item.points_change || 0) > 0 ? 'text-mint' : 'text-coral'
                     }`}
                   >
-                    {item.event}
+                    {(item.points_change || 0) > 0 ? `+${item.points_change}` : item.points_change}
                   </span>
-                  <span className="text-xs text-gray">{item.reason}</span>
+                  <span className="text-xs text-gray">{item.reason || item.event_type || ''}</span>
                 </div>
-                <span className="text-xs text-gray-light">{item.date}</span>
+                <span className="text-xs text-gray-light">
+                  {new Date(item.created_at).toLocaleDateString()}
+                </span>
               </div>
-            ))}
+            )) : (
+              <p className="text-xs text-gray-light py-2 text-center">
+                {locale === 'zh-CN' ? '暫無紀錄' : 'No history yet'}
+              </p>
+            )}
           </div>
         </motion.div>
 
@@ -308,11 +355,15 @@ export default function ProfilePage() {
         >
           <h3 className="font-bold text-dark mb-3">{t('profile.interests')}</h3>
           <div className="flex flex-wrap gap-2">
-            {profile.interests.map((interest) => (
+            {interests.length > 0 ? interests.map((interest: string) => (
               <span key={interest} className="tag tag-active">
                 {t(`tag.${interest}`)}
               </span>
-            ))}
+            )) : (
+              <span className="text-xs text-gray-light">
+                {locale === 'zh-CN' ? '還沒有興趣標籤' : 'No interests yet'}
+              </span>
+            )}
           </div>
         </motion.div>
 
@@ -325,7 +376,7 @@ export default function ProfilePage() {
         >
           <h3 className="font-bold text-dark mb-3">{t('profile.languagesSpoken')}</h3>
           <div className="flex flex-wrap gap-2">
-            {profile.languagesSpoken.map((lang) => (
+            {(user.languages_spoken || []).map((lang: string) => (
               <span key={lang} className="tag">
                 {languageFlags[lang]} {t(`language.${lang}`)}
               </span>

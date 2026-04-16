@@ -50,7 +50,6 @@ export default function TabBar() {
       label: t('nav.notifications'),
       icon: Bell,
       activeIcon: Bell,
-      badge: 3,
     },
     {
       href: `/${locale}/profile`,

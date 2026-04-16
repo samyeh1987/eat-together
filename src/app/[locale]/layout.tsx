@@ -3,6 +3,7 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import TabBar from '@/components/layout/TabBar';
+import AuthProvider from '@/components/auth/AuthProvider';
 
 type Props = {
   children: React.ReactNode;
@@ -43,8 +44,10 @@ export default async function LocaleLayout({ children, params }: Props) {
       </head>
       <body className="min-h-screen flex flex-col bg-cream">
         <NextIntlClientProvider messages={messages}>
-          <main className="flex-1 pb-20">{children}</main>
-          <TabBar />
+          <AuthProvider>
+            <main className="flex-1 pb-20">{children}</main>
+            <TabBar />
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>
