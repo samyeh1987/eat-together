@@ -52,21 +52,14 @@ export default function ProfilePage() {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const { user, signOut } = useAuthStore();
+  const { user, signOut, isLoading: authLoading } = useAuthStore();
   const [creditHistory, setCreditHistory] = useState<any[]>([]);
   const [mealsHosted, setMealsHosted] = useState(0);
   const [mealsJoined, setMealsJoined] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
 
   const creditInfo = getCreditLevel(user?.credit_score || 100);
   const photoSlots = 6;
-
-  useEffect(() => {
-    // Wait a tick for AuthProvider to populate user
-    const timer = setTimeout(() => setIsLoading(false), 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -81,7 +74,7 @@ export default function ProfilePage() {
     })();
   }, [user?.id]);
 
-  if (isLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
