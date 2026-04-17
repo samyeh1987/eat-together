@@ -108,6 +108,37 @@ function Step1({ form, updateField, t }: {
         />
       </div>
 
+      {/* Location Picker - Address Search + Map (with auto restaurant name fill) */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-semibold text-dark mb-2">
+          <MapPin size={16} className="text-mint" />
+          {t('meal.restaurantAddress')}
+        </label>
+        <LocationPicker
+          address={form.address}
+          onLocationSelect={(data) => {
+            updateField('latitude', data.lat);
+            updateField('longitude', data.lng);
+            // Auto-fill restaurant name from place selection
+            if (data.placeName && !form.restaurant) {
+              updateField('restaurant', data.placeName);
+            }
+          }}
+          onAddressChange={(addr) => updateField('address', addr)}
+          initialLat={form.latitude}
+          initialLng={form.longitude}
+          locale={locale}
+          searchPlaceholder={locale === 'zh-CN' ? '搜尋餐廳名或地址...' : locale === 'th' ? 'ค้นหาชื่อร้านหรือที่อยู่...' : 'Search restaurant name or address...'}
+          restaurantName={form.restaurant}
+          onRestaurantNameChange={(name) => updateField('restaurant', name)}
+        />
+        <p className="text-xs text-gray-light mt-1">
+          {locale === 'zh-CN' ? '💡 選擇餐廳後會自動帶入餐廳名稱' :
+           locale === 'th' ? '💡 เลือกร้านอาหารจะกรอกชื่อร้านอัตโนมัติ' :
+           '💡 Restaurant name auto-fills when you select a place'}
+        </p>
+      </div>
+
       {/* Restaurant Name */}
       <div>
         <label className="flex items-center gap-2 text-sm font-semibold text-dark mb-2">
@@ -120,26 +151,6 @@ function Step1({ form, updateField, t }: {
           placeholder="e.g. Somboon Seafood"
           value={form.restaurant}
           onChange={(e) => updateField('restaurant', e.target.value)}
-        />
-      </div>
-
-      {/* Location Picker - Address Search + Map */}
-      <div>
-        <label className="flex items-center gap-2 text-sm font-semibold text-dark mb-2">
-          <MapPin size={16} className="text-mint" />
-          {t('meal.restaurantAddress')}
-        </label>
-        <LocationPicker
-          address={form.address}
-          onLocationSelect={(data) => {
-            updateField('latitude', data.lat);
-            updateField('longitude', data.lng);
-          }}
-          onAddressChange={(addr) => updateField('address', addr)}
-          initialLat={form.latitude}
-          initialLng={form.longitude}
-          locale={locale}
-          searchPlaceholder={locale === 'zh-CN' ? '搜尋餐廳或地址...' : locale === 'th' ? 'ค้นหาร้านอาหารหรือที่อยู่...' : 'Search restaurant or address...'}
         />
       </div>
 
