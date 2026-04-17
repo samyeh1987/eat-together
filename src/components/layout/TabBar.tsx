@@ -67,7 +67,7 @@ export default function TabBar() {
       label: t('nav.notifications'),
       icon: Bell,
       activeIcon: Bell,
-      badge: unreadCount,
+      badge: Math.max(0, Number(unreadCount) || 0),
     },
     {
       href: `/${locale}/profile`,
@@ -120,9 +120,9 @@ export default function TabBar() {
                       isActive ? 'text-primary' : 'text-gray-light'
                     )}
                   />
-                  {tab.badge && tab.badge > 0 && (
-                    <span className="absolute -top-1.5 -right-2 w-4 h-4 bg-coral text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                      {tab.badge}
+                  {typeof tab.badge === 'number' && tab.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 bg-coral text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {tab.badge > 99 ? '99+' : tab.badge}
                     </span>
                   )}
                 </div>
