@@ -14,7 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
-import { getMyMeals, leaveMeal } from '@/lib/api';
+import { fetchMyMeals, leaveMeal } from '@/lib/api';
 
 type TabKey = 'all' | 'hosting' | 'joined' | 'completed';
 
@@ -191,7 +191,7 @@ export default function MyMealsPage() {
   useEffect(() => {
     if (user?.id) {
       setIsLoading(true);
-      getMyMeals(user.id)
+      fetchMyMeals(user.id)
         .then(setMeals)
         .catch(console.error)
         .finally(() => setIsLoading(false));
@@ -224,7 +224,7 @@ export default function MyMealsPage() {
     const result = await leaveMeal(mealId);
     if (result.success && user?.id) {
       // Refresh the list
-      const updated = await getMyMeals(user.id);
+      const updated = await fetchMyMeals(user.id);
       setMeals(updated);
     }
   };
