@@ -12,12 +12,7 @@ import {
 import { useAuthStore } from '@/store/auth-store';
 import { updateProfile } from '@/lib/api';
 
-const AGE_OPTIONS = ['18-24', '25-34', '35-44', '45-54', '55+'];
-const GENDER_OPTIONS = [
-  { key: 'male', emoji: '👨' },
-  { key: 'female', emoji: '👩' },
-  { key: 'prefer_not_to_say', emoji: '✨' },
-];
+const AGE_OPTIONS = ['18-24', '25-30', '31-35', '36-40', '40+'];
 const OCCUPATION_OPTIONS = [
   'Technology', 'Design', 'Marketing', 'Finance', 'Education',
   'Healthcare', 'Food & Beverage', 'Consulting', 'Freelance',
@@ -44,7 +39,6 @@ export default function ProfileForm({ isOpen, onClose }: ProfileFormProps) {
   const [bio, setBio] = useState('');
   const [ageRange, setAgeRange] = useState('');
   const [occupation, setOccupation] = useState('');
-  const [gender, setGender] = useState('');
   const [languages, setLanguages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -53,7 +47,6 @@ export default function ProfileForm({ isOpen, onClose }: ProfileFormProps) {
       setBio(user.bio || '');
       setAgeRange(user.age_range || '');
       setOccupation((user as any).occupation || '');
-      setGender((user as any).gender || '');
       setLanguages(user.languages_spoken || []);
     }
   }, [isOpen, user]);
@@ -75,7 +68,6 @@ export default function ProfileForm({ isOpen, onClose }: ProfileFormProps) {
         bio,
         age_range: ageRange || null,
         occupation: occupation || null,
-        gender: gender || null,
         languages_spoken: languages,
       });
 
@@ -183,28 +175,6 @@ export default function ProfileForm({ isOpen, onClose }: ProfileFormProps) {
                 <p className="text-[10px] text-gray-light mt-1">{nickname.length}/30</p>
               </div>
 
-              {/* Gender */}
-              <div>
-                <label className="text-xs font-semibold text-gray mb-2 block">
-                  {t('profile.gender')}
-                </label>
-                <div className="flex gap-2">
-                  {GENDER_OPTIONS.map((g) => (
-                    <button
-                      key={g.key}
-                      onClick={() => setGender(gender === g.key ? '' : g.key)}
-                      className={`flex-1 py-2.5 rounded-xl text-sm text-center transition-all ${
-                        gender === g.key
-                          ? 'bg-primary/10 text-primary font-medium border border-primary/30'
-                          : 'bg-light text-gray hover:bg-gray-lighter'
-                      }`}
-                    >
-                      {g.emoji} {t(`profile.${g.key === 'prefer_not_to_say' ? 'preferNotToSay' : g.key}`)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Age Range */}
               <div>
                 <label className="text-xs font-semibold text-gray mb-2 block">
@@ -287,7 +257,7 @@ export default function ProfileForm({ isOpen, onClose }: ProfileFormProps) {
             </div>
 
             {/* Bottom safe area */}
-            <div className="h-[env(safe-area-inset-bottom)]" />
+            <div className="h-6 safe-bottom" />
           </motion.div>
         </>
       )}

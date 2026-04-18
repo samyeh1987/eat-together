@@ -226,18 +226,18 @@ export async function joinMeal(mealId: string): Promise<{ success: boolean; erro
 
   // Notify meal host (fire-and-forget)
   if (meal && meal.creator_id !== user.id) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('nickname')
-      .eq('id', user.id)
-      .single();
+    const [{ data: profile }, { data: hostProfile }] = await Promise.all([
+      supabase.from('profiles').select('nickname').eq('id', user.id).single(),
+      supabase.from('profiles').select('languages_spoken').eq('id', meal.creator_id).single(),
+    ]);
     createNotification({
       userId: meal.creator_id,
       type: 'joined',
-      title: profile?.nickname || 'Someone',
-      message: `joined your "${meal.title}"`,
+      actorName: profile?.nickname || 'Someone',
+      mealTitle: meal.title,
       mealId,
       actorId: user.id,
+      recipientLanguages: (hostProfile?.languages_spoken as string[]) || [],
     }).catch(() => {});
   }
 
@@ -267,18 +267,18 @@ export async function leaveMeal(mealId: string): Promise<{ success: boolean; err
 
   // Notify meal host (fire-and-forget)
   if (meal && meal.creator_id !== user.id) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('nickname')
-      .eq('id', user.id)
-      .single();
+    const [{ data: profile }, { data: hostProfile }] = await Promise.all([
+      supabase.from('profiles').select('nickname').eq('id', user.id).single(),
+      supabase.from('profiles').select('languages_spoken').eq('id', meal.creator_id).single(),
+    ]);
     createNotification({
       userId: meal.creator_id,
       type: 'leave',
-      title: profile?.nickname || 'Someone',
-      message: `left your "${meal.title}"`,
+      actorName: profile?.nickname || 'Someone',
+      mealTitle: meal.title,
       mealId,
       actorId: user.id,
+      recipientLanguages: (hostProfile?.languages_spoken as string[]) || [],
     }).catch(() => {});
   }
 
@@ -311,6 +311,21 @@ export async function cancelMeal(mealId: string): Promise<{ success: boolean; er
       .eq('meal_id', mealId)
       .eq('status', 'approved');
     if (participants) {
+      // Batch fetch participant languages
+      const participantIds = participants.filter(p => p.user_id !== user?.id).map(p => p.user_id);
+      let langMap: Record<string, string[]> = {};
+      if (participantIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, languages_spoken')
+          .in('id', participantIds);
+        if (profiles) {
+          langMap = profiles.reduce((acc, p) => {
+            acc[p.id] = (p.languages_spoken as string[]) || [];
+            return acc;
+          }, {} as Record<string, string[]>);
+        }
+      }
       await Promise.all(
         participants
           .filter((p) => p.user_id !== user?.id)
@@ -318,9 +333,9 @@ export async function cancelMeal(mealId: string): Promise<{ success: boolean; er
             createNotification({
               userId: p.user_id,
               type: 'cancelled',
-              title: 'Meal Cancelled',
-              message: `"${meal.title}" has been cancelled`,
+              mealTitle: meal.title,
               mealId,
+              recipientLanguages: langMap[p.user_id] || [],
             }).catch(() => {})
           )
       );
@@ -550,20 +565,110 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
     .eq('read', false);
 }
 
+// Notification message templates by type and locale
+const NOTIF_MESSAGES: Record<string, Record<string, { title: string; message: (data: { actorName?: string; mealTitle?: string }) => string }>> = {
+  joined: {
+    'zh-CN': {
+      title: (d) => d.actorName || '有人',
+      message: (d) => `加入了你的「${d.mealTitle}」`,
+    },
+    th: {
+      title: (d) => d.actorName || 'ใครบางคน',
+      message: (d) => `เข้าร่วม "${d.mealTitle}" ของคุณ`,
+    },
+    en: {
+      title: (d) => d.actorName || 'Someone',
+      message: (d) => `joined your "${d.mealTitle}"`,
+    },
+  },
+  leave: {
+    'zh-CN': {
+      title: (d) => d.actorName || '有人',
+      message: (d) => `退出了你的「${d.mealTitle}」`,
+    },
+    th: {
+      title: (d) => d.actorName || 'ใครบางคน',
+      message: (d) => `ออกจาก "${d.mealTitle}" ของคุณ`,
+    },
+    en: {
+      title: (d) => d.actorName || 'Someone',
+      message: (d) => `left your "${d.mealTitle}"`,
+    },
+  },
+  cancelled: {
+    'zh-CN': {
+      title: () => '飯局已取消',
+      message: (d) => `「${d.mealTitle}」已被取消`,
+    },
+    th: {
+      title: () => 'อาหารถูกยกเลิก',
+      message: (d) => `"${d.mealTitle}" ถูกยกเลิกแล้ว`,
+    },
+    en: {
+      title: () => 'Meal Cancelled',
+      message: (d) => `"${d.mealTitle}" has been cancelled`,
+    },
+  },
+  confirmed: {
+    'zh-CN': {
+      title: () => '飯局已成立',
+      message: (d) => `「${d.mealTitle}」已確認成立`,
+    },
+    th: {
+      title: () => 'อาหารได้รับการยืนยัน',
+      message: (d) => `"${d.mealTitle}" ได้รับการยืนยันแล้ว`,
+    },
+    en: {
+      title: () => 'Meal Confirmed',
+      message: (d) => `"${d.mealTitle}" has been confirmed`,
+    },
+  },
+  deadline: {
+    'zh-CN': {
+      title: () => '報名截止提醒',
+      message: (d) => `「${d.mealTitle}」即將截止報名`,
+    },
+    th: {
+      title: () => 'เตือนกำหนด',
+      message: (d) => `"${d.mealTitle}" ใกล้ถึงเวลาปิดรับสมัคร`,
+    },
+    en: {
+      title: () => 'Deadline Reminder',
+      message: (d) => `"${d.mealTitle}" is closing soon`,
+    },
+  },
+};
+
+function pickLocale(languages: string[]): string {
+  if (languages.includes('zh-CN')) return 'zh-CN';
+  if (languages.includes('zh')) return 'zh-CN';
+  if (languages.includes('th')) return 'th';
+  return 'en';
+}
+
 export async function createNotification(data: {
   userId: string;
   type: string;
-  title: string;
-  message: string;
+  actorName?: string;
+  mealTitle?: string;
   mealId?: string;
   actorId?: string;
+  recipientLanguages?: string[];
 }): Promise<void> {
   const supabase = createClient();
+
+  const locale = pickLocale(data.recipientLanguages || ['en']);
+  const typeTemplates = NOTIF_MESSAGES[data.type];
+  const templates = typeTemplates?.[locale] || typeTemplates?.['en'] || NOTIF_MESSAGES.cancelled['en'];
+
+  const title = templates.title({ actorName: data.actorName, mealTitle: data.mealTitle });
+  const message = templates.message({ actorName: data.actorName, mealTitle: data.mealTitle });
+
   await supabase.from('notifications').insert({
     user_id: data.userId,
     type: data.type,
-    title: data.title,
-    message: data.message,
+    title,
+    message,
     data: {
       meal_id: data.mealId || null,
       actor_id: data.actorId || null,

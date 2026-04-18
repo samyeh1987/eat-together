@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { fetchProfile, fetchCreditHistory, fetchMyMeals } from '@/lib/api';
+import { createClient } from '@/lib/supabase/client';
 import ProfileForm from '@/components/profile/ProfileForm';
 
 // Language display mapping
@@ -31,13 +32,8 @@ const languageFlags: Record<string, string> = {
   ko: '🇰🇷',
 };
 
-// Gender emoji
-const genderEmoji: Record<string, string> = {
-  male: '👨',
-  female: '👩',
-  prefer_not_to_say: '✨',
-  other: '✨',
-};
+// Gender emoji (stored in occupation or not used)
+// const genderEmoji: Record<string, string> = { ... };
 
 // Credit level calculation
 function getCreditLevel(score: number): { level: string; stars: number; color: string } {
@@ -60,6 +56,73 @@ export default function ProfilePage() {
 
   const creditInfo = getCreditLevel(user?.credit_score || 100);
   const photoSlots = 6;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAddPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    setIsUploading(true);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop();
+      const filePath = `profile-photos/${user.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(filePath);
+
+      // Store photo URL in profile metadata (for now, update bio or use a separate table)
+      // Since profiles table doesn't have photos column yet, store as comma-separated in a note
+      const currentPhotos: string[] = (user as any).photos || [];
+      const updatedPhotos = [...currentPhotos, publicUrl].slice(0, photoSlots);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ photos: updatedPhotos } as any)
+        .eq('id', user.id);
+
+      if (!updateError) {
+        // Refresh user data
+        const { fetchUser } = useAuthStore.getState();
+        await fetchUser();
+      }
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      alert(locale === 'zh-CN' ? '照片上傳失敗' : 'Failed to upload photo');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemovePhoto = async (index: number) => {
+    if (!user?.id) return;
+    const currentPhotos: string[] = (user as any).photos || [];
+    const updatedPhotos = currentPhotos.filter((_, i) => i !== index);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('profiles')
+        .update({ photos: updatedPhotos } as any)
+        .eq('id', user.id);
+
+      if (!error) {
+        const { fetchUser } = useAuthStore.getState();
+        await fetchUser();
+      }
+    } catch (err) {
+      console.error('Photo remove error:', err);
+    }
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -137,7 +200,6 @@ export default function ProfilePage() {
             {/* Name & Bio */}
             <h1 className="mt-4 text-2xl font-bold text-white">{user.nickname || 'Anonymous'}</h1>
             <p className="mt-1 text-sm text-white/80 flex items-center gap-1.5">
-              {(user as any).gender && <span>{genderEmoji[(user as any).gender] || ''}</span>}
               {(user as any).occupation && <span>{(user as any).occupation}</span>}
             </p>
           </div>
@@ -189,7 +251,10 @@ export default function ProfilePage() {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                  <button className="p-1.5 rounded-full bg-white/90 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleRemovePhoto(index)}
+                    className="p-1.5 rounded-full bg-white/90 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
                     <X className="w-3.5 h-3.5 text-coral" />
                   </button>
                 </div>
@@ -199,13 +264,28 @@ export default function ProfilePage() {
             {Array.from({ length: photoSlots - photos.length }).map((_, index) => (
               <button
                 key={`add-${index}`}
-                className="aspect-square rounded-xl border-2 border-dashed border-gray-lighter flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="aspect-square rounded-xl border-2 border-dashed border-gray-lighter flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-50"
               >
-                <Plus className="w-5 h-5 text-gray-light" />
-                <span className="text-[10px] text-gray-light">{t('profile.addPhoto')}</span>
+                {isUploading ? (
+                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5 text-gray-light" />
+                    <span className="text-[10px] text-gray-light">{t('profile.addPhoto')}</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAddPhoto}
+            className="hidden"
+          />
           <p className="text-xs text-gray-light text-center mt-2">{t('profile.photoLimit')}</p>
         </motion.div>
 
