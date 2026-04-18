@@ -511,6 +511,7 @@ export async function fetchNotifications(userId: string): Promise<Notification[]
   }
   return (data || []).map((n: Notification) => ({
     id: n.id,
+    user_id: n.user_id,
     type: n.type,
     title: n.title,
     message: n.message,
