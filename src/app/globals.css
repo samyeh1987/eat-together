@@ -52,6 +52,11 @@
   .safe-bottom {
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
   }
+
+  /* Prevent Leaflet map from overlapping TabBar (z-index: 50) */
+  .leaflet-container {
+    z-index: 1;
+  }
 }
 
 @layer components {
