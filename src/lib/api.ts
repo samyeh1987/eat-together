@@ -568,7 +568,8 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 }
 
 // Notification message templates by type and locale
-const NOTIF_MESSAGES: Record<string, Record<string, { title: string; message: (data: { actorName?: string; mealTitle?: string }) => string }>> = {
+type NotifData = { actorName?: string; mealTitle?: string };
+const NOTIF_MESSAGES: Record<string, Record<string, { title: (d: NotifData) => string; message: (d: NotifData) => string }>> = {
   joined: {
     'zh-CN': {
       title: (d) => d.actorName || '有人',
