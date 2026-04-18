@@ -78,8 +78,8 @@ export default function TabBar() {
   ];
 
   return (
-    <nav className="shrink-0 bg-white/90 backdrop-blur-xl border-t border-gray-lighter/50 pb-[env(safe-area-inset-bottom,0px)]">
-        <div className="flex items-center justify-around h-14 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-gray-lighter/50 safe-bottom">
+      <div className="flex items-center justify-around h-14 px-2">
           {tabs.map((tab) => {
             const isActive = pathname === tab.href || 
               (tab.href !== `/${locale}` && pathname.startsWith(tab.href));
