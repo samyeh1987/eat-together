@@ -45,7 +45,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       <body className="min-h-screen flex flex-col bg-cream">
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
-            <main className="flex-1 pb-20">{children}</main>
+            <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">{children}</main>
             <TabBar />
           </AuthProvider>
         </NextIntlClientProvider>
