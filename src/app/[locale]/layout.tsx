@@ -37,15 +37,15 @@ export default async function LocaleLayout({ children, params }: Props) {
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossOrigin=""
         />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="theme-color" content="#FFF8F0" />
       </head>
-      <body className="min-h-screen flex flex-col bg-cream">
+      <body className="h-[100dvh] h-screen flex flex-col bg-cream overflow-hidden">
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
-            <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">{children}</main>
+            <main className="flex-1 overflow-y-auto overscroll-contain pb-[calc(4rem+env(safe-area-inset-bottom,0px))]">{children}</main>
             <TabBar />
           </AuthProvider>
         </NextIntlClientProvider>
