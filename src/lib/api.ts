@@ -149,7 +149,8 @@ export async function createMeal(formData: {
 
   if (!user) return { success: false, error: 'Not authenticated' };
 
-  // Insert meal
+  // Insert meal (deadline defaults to datetime if not set)
+  const mealDeadline = formData.deadline || formData.datetime;
   const { data: meal, error: mealError } = await supabase
     .from('meals')
     .insert({
@@ -160,7 +161,8 @@ export async function createMeal(formData: {
       cuisine_type: formData.cuisine_type,
       meal_languages: formData.meal_languages,
       datetime: formData.datetime,
-      deadline: formData.deadline,
+      deadline: mealDeadline,
+      status: 'open',
       min_participants: formData.min_participants,
       max_participants: formData.max_participants,
       payment_method: formData.payment_method,
@@ -176,7 +178,6 @@ export async function createMeal(formData: {
 
   if (mealError || !meal) {
     const errMsg = mealError?.message || 'Failed to create meal';
-    alert(`[createMeal DB Error]\nCode: ${mealError?.code}\nMessage: ${errMsg}\nDetails: ${mealError?.details || 'N/A'}\nHint: ${mealError?.hint || 'N/A'}`);
     return { success: false, error: errMsg };
   }
 
@@ -765,7 +766,7 @@ function transformMeal(raw: MealRow): Meal {
     // Extra display fields for backward compat
     _cuisineEmoji: CUISINE_EMOJI[raw.cuisine_type] || '🍴',
     _paymentEmoji: PAYMENT_EMOJI[raw.payment_method] || '💰',
-    _currentParticipants: participants.length,
+    _currentParticipants: (participants?.filter((p: any) => p.status === 'approved').length || 0) + 1, // +1 for creator
     _languages: (raw.meal_languages || []).map((l: string) => FLAG_MAP[l] || { key: l, flag: '🌍' }),
   } as Meal & {
     _cuisineEmoji: string;

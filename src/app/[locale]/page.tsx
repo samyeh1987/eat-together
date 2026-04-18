@@ -78,7 +78,7 @@ export default function HomePage() {
           .map((m: any) => ({
             ...m,
             restaurant: m.restaurant_name,
-            current: m._currentParticipants ?? m.participants?.length ?? 1,
+            current: m._currentParticipants ?? 1,
             max: m.max_participants,
             min: m.min_participants,
             cuisineEmoji: m._cuisineEmoji || CUISINE_EMOJI[m.cuisine_type] || '🍴',

@@ -214,11 +214,14 @@ function Step2({ form, updateField, toggleArrayItem, t }: {
         />
       </div>
 
-      {/* Deadline */}
+      {/* Deadline (optional) */}
       <div>
         <label className="flex items-center gap-2 text-sm font-semibold text-dark mb-2">
           <Clock size={16} className="text-coral" />
           {t('meal.deadline')}
+          <span className="text-xs font-normal text-gray-light">
+            ({locale === 'zh-CN' ? '選填' : locale === 'th' ? 'ไม่จำเป็น' : 'optional'})
+          </span>
         </label>
         <input
           type="datetime-local"
@@ -586,13 +589,13 @@ export default function CreateMealPage() {
       return;
     }
 
-    // Validate date formats
+    // Validate date formats — deadline defaults to datetime if not set
     const dateObj = new Date(form.dateTime);
-    const deadlineObj = form.deadline ? new Date(form.deadline) : dateObj;
     if (isNaN(dateObj.getTime())) {
-      setSubmitError('Invalid date/time selected');
+      setSubmitError('Please select date and time');
       return;
     }
+    const deadlineObj = form.deadline ? new Date(form.deadline) : dateObj;
     if (form.deadline && isNaN(deadlineObj.getTime())) {
       setSubmitError('Invalid deadline selected');
       return;
@@ -631,8 +634,6 @@ export default function CreateMealPage() {
       console.error('[CreateMeal] Exception:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
       setSubmitError(errMsg);
-      // Show full error as alert for mobile debugging
-      alert(`[CreateMeal Error]\n${errMsg}\n\nStack: ${err instanceof Error ? err.stack : 'N/A'}`);
     } finally {
       setIsSubmitting(false);
     }

@@ -115,9 +115,9 @@ export default function MealDetailPage() {
   );
 
   const dateLocale = locale === 'th' ? 'th-TH' : locale === 'zh-CN' ? 'zh-CN' : 'en-US';
-  const currentParticipants = (meal?.participants?.filter(
+  const currentParticipants = meal?._currentParticipants ?? ((meal?.participants?.filter(
     (p: any) => p.status === 'approved'
-  ).length || 0) + 1; // +1 for creator
+  ).length || 0) + 1);
   const isFull = currentParticipants >= (meal?.max_participants || 0);
   const progressPercent = meal ? Math.min((currentParticipants / (meal.max_participants || 1)) * 100, 100) : 0;
   const hoursUntil = meal ? getHoursUntilMeal(meal.datetime) : 0;
