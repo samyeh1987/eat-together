@@ -465,12 +465,12 @@ export default function AdminRestaurantsPage() {
               {/* Contact Info */}
               <div className="space-y-3 bg-gray-50 rounded-xl p-4">
                 <h4 className="text-sm font-semibold text-gray-700">{t('restaurants.contactInfo')}</h4>
-                {[
-                  selectedRestaurant.address && { icon: MapPin, label: t('restaurants.address'), value: selectedRestaurant.address },
-                  selectedRestaurant.phone && { icon: Phone, label: t('restaurants.phone'), value: selectedRestaurant.phone },
-                  selectedRestaurant.email && { icon: Mail, label: t('restaurants.email'), value: selectedRestaurant.email },
-                  selectedRestaurant.contact_person && { icon: Users, label: t('restaurants.contactPerson'), value: selectedRestaurant.contact_person },
-                ].filter((item): item is NonNullable<typeof item> => !!item).map(item => {
+                {([
+                  selectedRestaurant.address ? { icon: MapPin, label: t('restaurants.address'), value: selectedRestaurant.address } : null,
+                  selectedRestaurant.phone ? { icon: Phone, label: t('restaurants.phone'), value: selectedRestaurant.phone } : null,
+                  selectedRestaurant.email ? { icon: Mail, label: t('restaurants.email'), value: selectedRestaurant.email } : null,
+                  selectedRestaurant.contact_person ? { icon: Users, label: t('restaurants.contactPerson'), value: selectedRestaurant.contact_person } : null,
+                ].filter((item): item is { icon: typeof MapPin; label: string; value: string } => item !== null).map(item => {
                   const Icon = item.icon;
                   return (
                     <div key={item.label} className="flex items-start gap-2.5">
