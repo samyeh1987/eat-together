@@ -191,6 +191,8 @@ function Step2({ form, updateField, toggleArrayItem, t }: {
   toggleArrayItem: (key: 'languages' | 'tags', item: string) => void;
   t: (key: string) => string;
 }) {
+  const locale = useLocale();
+
   const getMinDateTime = () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
