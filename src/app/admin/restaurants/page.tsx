@@ -11,9 +11,9 @@ import { CUISINE_EMOJI, type AdminRestaurant, type RestaurantDeal } from '../dat
 import { useAdminT } from '../AdminI18nProvider';
 
 // Supabase helpers (admin pages run server-side via middleware, so use browser client)
+import { createClient } from '@/lib/supabase/client';
+
 function getSupabase() {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createClient } = require('@/lib/supabase');
   return createClient();
 }
 
