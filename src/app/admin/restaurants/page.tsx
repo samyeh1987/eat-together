@@ -465,24 +465,42 @@ export default function AdminRestaurantsPage() {
               {/* Contact Info */}
               <div className="space-y-3 bg-gray-50 rounded-xl p-4">
                 <h4 className="text-sm font-semibold text-gray-700">{t('restaurants.contactInfo')}</h4>
-                {([
-                  selectedRestaurant.address ? { icon: MapPin, label: t('restaurants.address'), value: selectedRestaurant.address } : null,
-                  selectedRestaurant.phone ? { icon: Phone, label: t('restaurants.phone'), value: selectedRestaurant.phone } : null,
-                  selectedRestaurant.email ? { icon: Mail, label: t('restaurants.email'), value: selectedRestaurant.email } : null,
-                  selectedRestaurant.contact_person ? { icon: Users, label: t('restaurants.contactPerson'), value: selectedRestaurant.contact_person } : null,
-                ].filter((item): item is { icon: typeof MapPin; label: string; value: string } => item !== null).map(item => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.label} className="flex items-start gap-2.5">
-                      <Icon className="w-4 h-4 text-gray-400 mt-0.5" />
-                      <div>
-                        <span className="text-[11px] text-gray-400">{item.label}</span>
-                        <p className="text-sm text-gray-700">{item.value}</p>
-                      </div>
+                {selectedRestaurant.address && (
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                    <div>
+                      <span className="text-[11px] text-gray-400">{t('restaurants.address')}</span>
+                      <p className="text-sm text-gray-700">{selectedRestaurant.address}</p>
                     </div>
-                  );
-                })}
-
+                  </div>
+                )}
+                {selectedRestaurant.phone && (
+                  <div className="flex items-start gap-2.5">
+                    <Phone className="w-4 h-4 text-gray-400 mt-0.5" />
+                    <div>
+                      <span className="text-[11px] text-gray-400">{t('restaurants.phone')}</span>
+                      <p className="text-sm text-gray-700">{selectedRestaurant.phone}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedRestaurant.email && (
+                  <div className="flex items-start gap-2.5">
+                    <Mail className="w-4 h-4 text-gray-400 mt-0.5" />
+                    <div>
+                      <span className="text-[11px] text-gray-400">{t('restaurants.email')}</span>
+                      <p className="text-sm text-gray-700">{selectedRestaurant.email}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedRestaurant.contact_person && (
+                  <div className="flex items-start gap-2.5">
+                    <Users className="w-4 h-4 text-gray-400 mt-0.5" />
+                    <div>
+                      <span className="text-[11px] text-gray-400">{t('restaurants.contactPerson')}</span>
+                      <p className="text-sm text-gray-700">{selectedRestaurant.contact_person}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Description */}
