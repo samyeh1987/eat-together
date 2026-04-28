@@ -128,14 +128,14 @@ function Step1({ form, updateField, t }: {
           initialLat={form.latitude}
           initialLng={form.longitude}
           locale={locale}
-          searchPlaceholder={locale === 'zh-CN' ? '搜尋餐廳名或地址...' : locale === 'th' ? 'ค้นหาชื่อร้านหรือที่อยู่...' : 'Search restaurant name or address...'}
+          searchPlaceholder={locale === 'zh-CN' ? '搜尋酒吧名或地址...' : locale === 'th' ? 'ค้นหาชื่อบาร์หรือที่อยู่...' : 'Search bar name or address...'}
           restaurantName={form.restaurant}
           onRestaurantNameChange={(name) => updateField('restaurant', name)}
         />
         <p className="text-xs text-gray-light mt-1">
-          {locale === 'zh-CN' ? '💡 選擇餐廳後會自動帶入餐廳名稱' :
-           locale === 'th' ? '💡 เลือกร้านอาหารจะกรอกชื่อร้านอัตโนมัติ' :
-           '💡 Restaurant name auto-fills when you select a place'}
+          {locale === 'zh-CN' ? '💡 選擇酒吧後會自動帶入酒吧名稱' :
+           locale === 'th' ? '💡 เลือกบาร์จะกรอกชื่อบาร์อัตโนมัติ' :
+           '💡 Bar name auto-fills when you select a place'}
         </p>
       </div>
 
@@ -524,9 +524,11 @@ export default function CreateMealPage() {
   const [form, setForm] = useState<MealForm>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   const updateField = useCallback(<K extends keyof MealForm>(key: K, value: MealForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setStepError(null);
   }, []);
 
   const toggleArrayItem = useCallback((key: 'languages' | 'tags', item: string) => {
@@ -536,14 +538,47 @@ export default function CreateMealPage() {
         ? prev[key].filter((v) => v !== item)
         : [...prev[key], item],
     }));
+    setStepError(null);
   }, []);
 
+  const validateStep1 = (): boolean => {
+    if (!form.title.trim()) {
+      setStepError(t('validation.titleRequired'));
+      return false;
+    }
+    if (!form.restaurant.trim()) {
+      setStepError(t('validation.restaurantRequired'));
+      return false;
+    }
+    if (!form.cuisine) {
+      setStepError(t('validation.cuisineRequired'));
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep2 = (): boolean => {
+    if (!form.dateTime) {
+      setStepError(t('validation.dateTimeRequired'));
+      return false;
+    }
+    if (!form.languages.length) {
+      setStepError(t('validation.languageRequired'));
+      return false;
+    }
+    return true;
+  };
+
   const goNext = () => {
+    setStepError(null);
+    if (step === 1 && !validateStep1()) return;
+    if (step === 2 && !validateStep2()) return;
     setDirection(1);
     setStep((s) => Math.min(s + 1, 3));
   };
 
   const goBack = () => {
+    setStepError(null);
     if (step === 1) {
       router.back();
       return;
@@ -571,23 +606,23 @@ export default function CreateMealPage() {
 
     // Validate required fields
     if (!form.title.trim()) {
-      setSubmitError('Please enter a title');
+      setSubmitError(t('validation.titleRequired'));
       return;
     }
     if (!form.restaurant.trim()) {
-      setSubmitError('Please enter restaurant name');
+      setSubmitError(t('validation.restaurantRequired'));
       return;
     }
     if (!form.cuisine) {
-      setSubmitError('Please select cuisine type');
+      setSubmitError(t('validation.cuisineRequired'));
       return;
     }
     if (!form.dateTime) {
-      setSubmitError('Please select date and time');
+      setSubmitError(t('validation.dateTimeRequired'));
       return;
     }
     if (!form.languages.length) {
-      setSubmitError('Please select at least one language');
+      setSubmitError(t('validation.languageRequired'));
       return;
     }
 
@@ -698,19 +733,26 @@ export default function CreateMealPage() {
 
       {/* Bottom Actions (Step 1 & 2) */}
       {step < 3 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 safe-bottom bg-cream border-t border-gray-lighter/50 px-4 py-3 flex gap-3">
-          {step > 1 && (
-            <button type="button" onClick={goBack} className="btn-secondary flex-1">
-              {t('common.back')}
-            </button>
+        <div className="fixed bottom-0 left-0 right-0 z-50 safe-bottom bg-cream border-t border-gray-lighter/50 px-4 py-3 flex flex-col gap-2">
+          {stepError && (
+            <div className="bg-coral/10 border border-coral/30 rounded-lg px-3 py-2 text-sm text-coral text-center">
+              {stepError}
+            </div>
           )}
-          <button
-            type="button"
-            onClick={goNext}
-            className="btn-primary flex-1 flex items-center justify-center gap-2"
-          >
-            {t('common.next')}
-          </button>
+          <div className="flex gap-3">
+            {step > 1 && (
+              <button type="button" onClick={goBack} className="btn-secondary flex-1">
+                {t('common.back')}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={goNext}
+              className="btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              {t('common.next')}
+            </button>
+          </div>
         </div>
       )}
     </div>

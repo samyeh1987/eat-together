@@ -1,5 +1,5 @@
-export const APP_NAME = 'EatTogether';
-export const APP_TAGLINE = 'Don\'t Eat Alone';
+export const APP_NAME = 'DrinkTogether';
+export const APP_TAGLINE = '不要一個人喝酒';
 
 // Colors
 export const COLORS = {
@@ -15,21 +15,18 @@ export const COLORS = {
   lightGray: '#F3F4F6',
 } as const;
 
-// Cuisine types with i18n keys and emojis
+// Bar types with i18n keys and emojis
 export const CUISINE_TYPES = [
-  { key: 'japanese', emoji: '🍣' },
-  { key: 'thai', emoji: '🍜' },
-  { key: 'chinese', emoji: '🥡' },
-  { key: 'korean', emoji: '🍖' },
-  { key: 'italian', emoji: '🍕' },
-  { key: 'western', emoji: '🥩' },
-  { key: 'hotpot', emoji: '🫕' },
-  { key: 'bbq', emoji: '🔥' },
-  { key: 'buffet', emoji: '🍽️' },
-  { key: 'seafood', emoji: '🦐' },
-  { key: 'dimsum', emoji: '🥟' },
-  { key: 'vegetarian', emoji: '🥗' },
-  { key: 'other', emoji: '🍴' },
+  { key: 'ktv', emoji: '🎤' },
+  { key: 'music', emoji: '🎵' },
+  { key: 'club', emoji: '💃' },
+  { key: 'lounge', emoji: '🛋️' },
+  { key: 'pub', emoji: '🍺' },
+  { key: 'rooftop', emoji: '🌃' },
+  { key: 'beach', emoji: '🏖️' },
+  { key: 'speakeasy', emoji: '🥃' },
+  { key: 'livehouse', emoji: '🎸' },
+  { key: 'other', emoji: '🍾' },
 ] as const;
 
 // Meal languages with flags

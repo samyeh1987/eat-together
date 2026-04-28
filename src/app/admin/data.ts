@@ -166,7 +166,6 @@ export const REPORT_REASON_LABELS: Record<string, string> = {
 };
 
 export const CUISINE_EMOJI: Record<string, string> = {
-  japanese: '🍣', thai: '🍜', chinese: '🥡', korean: '🍖', italian: '🍕',
-  western: '🥩', hotpot: '🫕', bbq: '🔥', buffet: '🍽️', seafood: '🦐',
-  dimsum: '🥟', vegetarian: '🥗', other: '🍴',
+  ktv: '🎤', music: '🎵', club: '💃', lounge: '🛋️', pub: '🍺',
+  rooftop: '🌃', beach: '🏖️', speakeasy: '🥃', livehouse: '🎸', other: '🍾',
 };
